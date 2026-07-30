@@ -26,13 +26,21 @@ const promptIdeas = [
   "校园活动 KV",
 ];
 
-export function HomeClient({ userName }: { userName: string | null }) {
+export function HomeClient({
+  userName,
+  prices,
+}: {
+  userName: string | null;
+  prices: { standard: number; pro: number };
+}) {
   const [prompt, setPrompt] = useState(
     "为大学摄影社设计一张春季招新海报，胶片质感，明亮蓝黄色，年轻有活力",
   );
   const [plan, setPlan] = useState<"image-2" | "image-2-Pro">("image-2");
 
   const studioHref = `/studio?prompt=${encodeURIComponent(prompt)}&plan=${encodeURIComponent(plan)}`;
+  const standardPrice = `¥${(prices.standard / 100).toFixed(2)}`;
+  const proPrice = `¥${(prices.pro / 100).toFixed(2)}`;
 
   return (
     <main>
@@ -120,7 +128,7 @@ export function HomeClient({ userName }: { userName: string | null }) {
                 <b>标准高清</b>
                 <small>2K 以下 · 日常够用</small>
               </span>
-              <strong>¥0.12</strong>
+              <strong>{standardPrice}</strong>
             </button>
             <button
               className={
@@ -134,14 +142,14 @@ export function HomeClient({ userName }: { userName: string | null }) {
                 <b>Pro 超清</b>
                 <small>最高 4K · 细节拉满</small>
               </span>
-              <strong>¥0.32</strong>
+              <strong>{proPrice}</strong>
             </button>
           </div>
 
           <a className="generate-cta" href={studioHref}>
             <Sparkles size={20} fill="currentColor" />
             立即生成
-            <span>{plan === "image-2" ? "¥0.12 / 次" : "¥0.32 / 次"}</span>
+            <span>{plan === "image-2" ? `${standardPrice} / 次` : `${proPrice} / 次`}</span>
           </a>
           <p className="microcopy">新同学注册即送 ¥5.00 体验余额</p>
         </div>
@@ -260,7 +268,7 @@ export function HomeClient({ userName }: { userName: string | null }) {
               <ImageIcon size={28} />
             </div>
             <h3>标准高清</h3>
-            <div className="big-price"><sup>¥</sup>0.12<small>/ 次</small></div>
+            <div className="big-price"><sup>¥</sup>{standardPrice.slice(1)}<small>/ 次</small></div>
             <p>适合日常海报、社媒封面和课程配图。</p>
             <ul>
               <li><Check size={17} /> 支持 1:1 / 3:2 / 2:3</li>
@@ -276,7 +284,7 @@ export function HomeClient({ userName }: { userName: string | null }) {
               <Zap size={28} fill="currentColor" />
             </div>
             <h3>Pro 超清</h3>
-            <div className="big-price"><sup>¥</sup>0.32<small>/ 次</small></div>
+            <div className="big-price"><sup>¥</sup>{proPrice.slice(1)}<small>/ 次</small></div>
             <p>适合毕设、印刷海报和需要放大查看的作品。</p>
             <ul>
               <li><Check size={17} /> 支持 1:1 / 16:9 / 9:16</li>
