@@ -9,57 +9,42 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: pixel-monitor-campus
   SERVER_PORT: 3086
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image (linux/amd64)
-        run: |
-          docker build \
-            --platform linux/amd64 \
-            --no-cache \
-            -t ${{ env.IMAGE_NAME }}:latest \
-            -f Dockerfile .
-
-      - name: Save and compress image
-        run: |
-          docker save ${{ env.IMAGE_NAME }}:latest | gzip > deploy.tar.gz
-          ls -lh deploy.tar.gz
-
-      - name: Deploy to server via rsync
-        uses: burnett01/rsync-deployments@7.0.1
-        with:
-          switches: -avz --progress --timeout=300
-          path: deploy.tar.gz
-          remote_path: /opt/pixel-monitor/
-          remote_host: ${{ secrets.SERVER_HOST }}
-          remote_user: ${{ secrets.SERVER_USER }}
-          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Load image and restart service
+      - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          command_timeout: 5m
+          command_timeout: 10m
           script: |
-            cd /opt/pixel-monitor
-            echo "Loading Docker image..."
-            docker load < deploy.tar.gz
-            rm -f deploy.tar.gz
+            # Clone or pull latest code
+            DEPLOY_DIR="/opt/pixel-monitor"
+            REPO_URL="https://github.com/chensibo2049/pixel-monitor.git"
+
+            if [ -d "$DEPLOY_DIR/.git" ]; then
+              cd $DEPLOY_DIR
+              git fetch origin main
+              git reset --hard origin/main
+            else
+              rm -rf $DEPLOY_DIR
+              git clone $REPO_URL $DEPLOY_DIR
+              cd $DEPLOY_DIR
+            fi
+
+            echo "Building Docker image..."
+            docker build --platform linux/amd64 --no-cache -t pixel-monitor-campus:latest -f Dockerfile .
 
             echo "Restarting service..."
             docker compose down
@@ -86,9 +71,4 @@ jobs:
         if: success()
         run: |
           echo "Deployment successful!"
-          echo "Server: ${{ secrets.SERVER_HOST }}:${{ env.SERVER_PORT }}"
           echo "URL: http://${{ secrets.SERVER_HOST }}:${{ env.SERVER_PORT }}"
-
-      - name: Cleanup
-        if: always()
-        run: rm -f deploy.tar.gz
