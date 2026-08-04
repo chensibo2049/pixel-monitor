@@ -1,4 +1,4 @@
-import { getChatGPTUser } from "../../../chatgpt-auth";
+import { getSessionUser } from "../../../auth";
 import {
   getAppEnv,
   getPricing,
@@ -9,7 +9,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const identity = await getChatGPTUser();
+  const identity = await getSessionUser();
   if (!identity) return Response.json({ error: "未登录" }, { status: 401 });
   const { DB } = getAppEnv();
   await initializeDatabase(DB);
@@ -17,9 +17,13 @@ export async function POST(request: Request) {
     return Response.json({ error: "无权访问" }, { status: 403 });
   }
 
-  const { applicationId } = (await request.json()) as {
+  const body = (await request.json().catch(() => null)) as {
     applicationId?: string;
-  };
+  } | null;
+  const applicationId = body?.applicationId?.trim() ?? "";
+  if (!applicationId) {
+    return Response.json({ error: "缺少申请编号。" }, { status: 400 });
+  }
   const application = await DB.prepare(
     "SELECT id, user_id, campus_name, desired_slug FROM agent_applications WHERE id = ? AND status = 'pending'",
   )
@@ -39,8 +43,8 @@ export async function POST(request: Request) {
   await DB.batch([
     DB.prepare(
       `INSERT INTO agent_sites
-        (id, owner_user_id, slug, campus_name, brand_name, standard_price_cents, pro_price_cents, commission_percent, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+        (id, owner_user_id, slug, campus_name, brand_name, standard_price_cents, pro_price_cents, standard_pack_price_cents, pro_pack_price_cents, commission_percent, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
     ).bind(
       siteId,
       application.user_id,
@@ -49,6 +53,8 @@ export async function POST(request: Request) {
       `${application.campus_name}生图站`,
       pricing.standardPriceCents,
       pricing.proPriceCents,
+      pricing.standardPackPriceCents,
+      pricing.proPackPriceCents,
       pricing.agentCommissionPercent,
     ),
     DB.prepare(

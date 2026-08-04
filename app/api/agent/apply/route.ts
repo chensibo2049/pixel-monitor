@@ -1,4 +1,4 @@
-import { getChatGPTUser } from "../../../chatgpt-auth";
+import { getSessionUser } from "../../../auth";
 import {
   getAppEnv,
   getOrCreateUser,
@@ -8,14 +8,15 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const identity = await getChatGPTUser();
+  const identity = await getSessionUser();
   if (!identity) return Response.json({ error: "请先登录" }, { status: 401 });
-  const body = (await request.json()) as Partial<{
+  const body = (await request.json().catch(() => null)) as Partial<{
     campusName: string;
     contact: string;
     desiredSlug: string;
     reason: string;
-  }>;
+  }> | null;
+  if (!body) return Response.json({ error: "请求格式不正确。" }, { status: 400 });
   const campusName = body.campusName?.trim() ?? "";
   const contact = body.contact?.trim() ?? "";
   const slug = (body.desiredSlug?.trim() ?? "")

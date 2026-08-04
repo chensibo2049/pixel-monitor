@@ -1,0 +1,19 @@
+services:
+  pixel-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pixel-monitor-campus:latest
+    container_name: pixel-monitor-campus
+    restart: unless-stopped
+    ports:
+      - "3086:3000"
+    environment:
+      NODE_ENV: production
+      DATA_DIR: /app/data
+      TZ: Asia/Shanghai
+      AUTH_SECRET: ${AUTH_SECRET:?请在服务器环境变量中配置至少32位的AUTH_SECRET}
+      IMAGE_API_KEY: ${IMAGE_API_KEY:?请在服务器环境变量中配置IMAGE_API_KEY}
+      IMAGE_API_BASE_URL: ${IMAGE_API_BASE_URL:-https://api.bananarouter.com/v1}
+    volumes:
+      - ./data:/app/data

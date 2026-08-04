@@ -1,38 +1,38 @@
-import { getChatGPTUser } from "../../../chatgpt-auth";
+import { getSessionUser } from "../../../auth";
 import {
   getAppEnv,
   getOrCreateUser,
   initializeDatabase,
+  readGeneratedAsset,
 } from "../../../../db/runtime";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const identity = await getChatGPTUser();
+  const identity = await getSessionUser();
   if (!identity) return new Response("Unauthorized", { status: 401 });
-
   const { id } = await context.params;
-  const appEnv = getAppEnv();
-  await initializeDatabase(appEnv.DB);
-  const user = await getOrCreateUser(
-    appEnv.DB,
-    identity.email,
-    identity.displayName,
-  );
-  const record = await appEnv.DB.prepare(
-    "SELECT image_key FROM generations WHERE id = ? AND user_id = ? AND status = 'completed'",
-  )
-    .bind(id, user.id)
-    .first<{ image_key: string }>();
-  if (!record?.image_key) return new Response("Not found", { status: 404 });
-
-  const object = await appEnv.IMAGES_BUCKET.get(record.image_key);
-  if (!object) return new Response("Not found", { status: 404 });
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("Cache-Control", "private, max-age=31536000, immutable");
-  return new Response(object.body, { headers });
+  const index = Math.max(0, Math.min(3, Number(new URL(request.url).searchParams.get("index")) || 0));
+  const { DB } = getAppEnv();
+  await initializeDatabase(DB);
+  const user = await getOrCreateUser(DB, identity.email, identity.displayName);
+  const asset = DB.prepare(
+    `SELECT a.file_name, a.mime_type
+     FROM generation_assets a
+     JOIN generations g ON g.id = a.generation_id
+     WHERE g.id = ? AND g.user_id = ? AND g.status = 'completed' AND a.position = ?`,
+  ).bind(id, user.id, index).first<{ file_name: string; mime_type: string }>();
+  if (!asset) return new Response("Not found", { status: 404 });
+  const image = await readGeneratedAsset(asset.file_name);
+  if (!image) return new Response("Not found", { status: 404 });
+  return new Response(new Uint8Array(image), {
+    headers: {
+      "Content-Type": asset.mime_type,
+      "Cache-Control": "private, max-age=31536000, immutable",
+      "Content-Disposition": `inline; filename="${asset.file_name}"`,
+    },
+  });
 }

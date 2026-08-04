@@ -22,10 +22,24 @@ type Site = {
   brand_name: string;
   standardPrice: string;
   proPrice: string;
+  standardPackPrice: string;
+  proPackPrice: string;
   commission_percent: number;
   status: string;
   orders: number;
   commission: string;
+  todayOrders: number;
+  weekOrders: number;
+  weekTrend: number;
+  popularOperation: string | null;
+};
+
+const operationLabels: Record<string, string> = {
+  generate: "文字生图",
+  edit: "局部修改",
+  variation: "生成类似",
+  image_to_image: "参考图生成",
+  remove_background: "一键去背景",
 };
 
 export function AgentClient({
@@ -124,6 +138,21 @@ export function AgentClient({
             <article><span>累计生成</span><strong>{site.orders}</strong><small>笔订单</small></article>
             <article><span>累计分佣</span><strong>{site.commission}</strong><small>待结算</small></article>
             <article><span>当前分佣</span><strong>{site.commission_percent}%</strong><small>每笔订单</small></article>
+            <article><span>今日订单</span><strong>{site.todayOrders}</strong><small>实时更新</small></article>
+            <article>
+              <span>近 7 天订单</span>
+              <strong>{site.weekOrders}</strong>
+              <small className={site.weekTrend < 0 ? "trend-down" : "trend-up"}>
+                {site.weekTrend > 0 ? "+" : ""}{site.weekTrend}% 较前 7 天
+              </small>
+            </article>
+            <article>
+              <span>近 30 天热门功能</span>
+              <strong className="operation-stat">
+                {site.popularOperation ? operationLabels[site.popularOperation] ?? "图片创作" : "暂无"}
+              </strong>
+              <small>仅汇总类型，不展示同学提示词</small>
+            </article>
           </div>
           <div className="site-link-box">
             <Link2 size={18} />
@@ -136,6 +165,8 @@ export function AgentClient({
           <div className="site-prices">
             <div><span>标准高清售价</span><strong>{site.standardPrice}</strong></div>
             <div><span>Pro 超清售价</span><strong>{site.proPrice}</strong></div>
+            <div><span>标准四图包</span><strong>{site.standardPackPrice}</strong></div>
+            <div><span>Pro 四图包</span><strong>{site.proPackPrice}</strong></div>
             <p>价格由平台后台统一配置，代理后台二期将支持在底价上自主加价。</p>
           </div>
         </section>
@@ -159,7 +190,7 @@ export function AgentClient({
             <h2>成为你们学校的<br />首位校园代理。</h2>
             <ul>
               <li><BadgePercent size={18} /> 首批校园代理优先获得活动素材支持</li>
-              <li><CheckCircle2 size={18} /> 分站订单、收入、余额实时可查</li>
+              <li><CheckCircle2 size={18} /> 分站订单、收益、积分消费实时可查</li>
               <li><Store size={18} /> 支持专属品牌名与校园宣传页</li>
             </ul>
           </div>

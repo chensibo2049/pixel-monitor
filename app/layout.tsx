@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { ThemeSwitcher } from "./components/theme-switcher";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -20,6 +21,11 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description:
       "专为大学生做的 AI 生图工具：校园海报、毕设概念、小红书封面，按次付费；支持校园代理开通专属分站。",
+    icons: {
+      icon: "/favicon.svg",
+      shortcut: "/favicon.svg",
+      apple: "/favicon.svg",
+    },
     openGraph: {
       title: "像素课代表",
       description: "大学生的 AI 生图搭子",
@@ -48,8 +54,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN">
-      <body>{children}</body>
+    <html lang="zh-CN" suppressHydrationWarning>
+      <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{document.documentElement.dataset.theme=localStorage.getItem("pixel-ui-theme")==="guofeng"?"guofeng":"youth"}catch(e){document.documentElement.dataset.theme="youth"}`,
+          }}
+        />
+        {children}
+        <ThemeSwitcher />
+      </body>
     </html>
   );
 }

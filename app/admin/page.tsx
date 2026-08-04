@@ -6,7 +6,7 @@ import {
   money,
   requireAdmin,
 } from "../../db/runtime";
-import { requireChatGPTUser } from "../chatgpt-auth";
+import { requireSessionUser } from "../auth";
 import { AdminClient } from "../components/admin-client";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default function AdminPage() {
 }
 
 async function AdminContent() {
-  const identity = await requireChatGPTUser("/admin");
+  const identity = await requireSessionUser("/admin");
   const { DB, IMAGE_API_KEY, IMAGE_API_BASE_URL } = getAppEnv();
   await initializeDatabase(DB);
   if (!(await requireAdmin(DB, identity.email))) {
@@ -34,7 +34,7 @@ async function AdminContent() {
     );
   }
 
-  const [pricing, generationStats, userStats, applications] =
+  const [pricing, generationStats, userStats, applications, recentGenerations] =
     await Promise.all([
       getPricing(DB),
       DB.prepare(
@@ -64,6 +64,29 @@ async function AdminContent() {
         display_name: string;
         email: string;
       }>(),
+      DB.prepare(
+        `SELECT g.id, g.user_id, g.prompt, g.plan, g.operation, g.size, g.image_count,
+                g.price_cents, g.status, g.error_message, g.created_at,
+                u.display_name, u.email
+         FROM generations g
+         JOIN users u ON u.id = g.user_id
+         ORDER BY g.created_at DESC
+         LIMIT 20`,
+      ).all<{
+        id: string;
+        user_id: string;
+        prompt: string;
+        plan: string;
+        operation: string;
+        size: string;
+        image_count: number;
+        price_cents: number;
+        status: string;
+        error_message: string | null;
+        created_at: string;
+        display_name: string;
+        email: string;
+      }>(),
     ]);
 
   return (
@@ -81,6 +104,10 @@ async function AdminContent() {
         agents: userStats?.agents ?? 0,
       }}
       applications={applications.results ?? []}
+      recentGenerations={(recentGenerations.results ?? []).map((g) => ({
+        ...g,
+        price: money(g.price_cents),
+      }))}
     />
   );
 }

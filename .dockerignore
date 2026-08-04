@@ -1,0 +1,13 @@
+.git
+.next
+.vinext
+node_modules
+data
+.env
+.env.*
+!.env.example
+work
+outputs
+npm-debug.log*
+Dockerfile*
+README.md
