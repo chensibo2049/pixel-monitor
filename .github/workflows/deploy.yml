@@ -34,8 +34,8 @@ jobs:
 
       - name: Save image as archive
         run: |
-          docker save ${{ env.IMAGE_NAME }}:latest | gzip > /tmp/deploy.tar.gz
-          echo "Image size: $(du -h /tmp/deploy.tar.gz | cut -f1)"
+          docker save ${{ env.IMAGE_NAME }}:latest | gzip > deploy.tar.gz
+          echo "Image size: $(du -h deploy.tar.gz | cut -f1)"
 
       - name: Deploy to server
         uses: appleboy/scp-action@v0.1.7
@@ -44,7 +44,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          source: /tmp/deploy.tar.gz
+          source: deploy.tar.gz
           target: /opt/pixel-monitor/
           strip_components: 0
 
